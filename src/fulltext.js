@@ -2,36 +2,30 @@ var _ = require('./../vendor/lodash');
 var lunr = require('lunr');
 
 /**
- * responsible for making full text searching on items
- * config provide only searchableFields
- */
+* responsible for making full text searching on items
+* config provide only searchableFields
+*/
 var Fulltext = function Fulltext(items, config) {
-  config = config || {};
-  config.searchableFields = config.searchableFields || [];
+  Fulltext.config = config || {};
+  var searchableFields = config.searchableFields || [];
   this.items = items; // creating index
 
   this.idx = lunr(function () {
     var _this = this;
 
-    // currently schema hardcoded
-    this.field("name", {
-      boost: 10,
+    _.forEach(searchableFields, function (boost, fieldname) {
+      _this.field(fieldname, { boost: boost });
     });
-    var self = this;
-
-    _.forEach(config.searchableFields, function (field) {
-      self.field(field);
-    });
-
     this.ref("id");
-
     var i = 1;
+
     _.map(items, function (doc) {
       if (!doc.id) {
         doc.id = i;
         ++i;
       }
-      self.add(doc);
+
+      _this.add(doc);
     });
   });
   this.store = _.mapKeys(items, function (doc) {
@@ -40,17 +34,24 @@ var Fulltext = function Fulltext(items, config) {
 };
 
 Fulltext.prototype = {
+  search: function search(SearchQuery) {
+    var searchMatcher = Fulltext.config.searchMatcher || {
+      wildcard: lunr.Query.wildcard.NONE,
+    };
+    var _this2 = this;
 
-  search: function(query) {
-    if (!query) {
+    if (!SearchQuery) {
       return this.items;
     }
-    return _.map(this.idx.search(query), (val) => {
-      var item = this.store[val.ref]
-      //delete item.id;
-      return item;
-    })
-  }
-}
+    var results = _this2.idx.query(function (q) {
+      q.term(lunr.tokenizer(SearchQuery), searchMatcher);
+    });
 
+    return _.map(results, function (val) {
+      var item = _this2.store[val.ref]; //delete item.id;
+
+      return item;
+    });
+  },
+};
 module.exports = Fulltext;
