@@ -5,46 +5,38 @@ var lunr = require('lunr');
  * responsible for making full text searching on items
  * config provide only searchableFields
  */
-var Fulltext = function(items, config) {
-
+var Fulltext = function Fulltext(items, config) {
   config = config || {};
   config.searchableFields = config.searchableFields || [];
-  this.items = items;
-  // creating index
-  this.idx = lunr(function () {
-    // currently schema hardcoded
-    this.field('name', { boost: 10 });
+  this.items = items; // creating index
 
+  this.idx = lunr(function () {
+    var _this = this;
+
+    // currently schema hardcoded
+    this.field("name", {
+      boost: 10,
+    });
     var self = this;
-    _.forEach(config.searchableFields, function(field) {
+
+    _.forEach(config.searchableFields, function (field) {
       self.field(field);
     });
-    this.ref('id');
 
-    /**
-     * Remove the stemmer and stopWordFilter from the pipeline 
-     * stemmer: https://github.com/olivernn/lunr.js/issues/328
-     * stopWordFilter: https://github.com/olivernn/lunr.js/issues/233
-     */
-    if (config.isExactSearch) {
-      this.pipeline.remove(lunr.stemmer)
-      this.pipeline.remove(lunr.stopWordFilter)
-    }
-  })
-  //var items2 = _.clone(items)
-  var i = 1;
-  _.map(items, (doc) => {
+    this.ref("id");
 
-    if (!doc.id) {
-      doc.id = i;
-      ++i;
-    }
-    this.idx.add(doc)
-  })
-
-  this.store = _.mapKeys(items, (doc) => {
+    var i = 1;
+    _.map(items, function (doc) {
+      if (!doc.id) {
+        doc.id = i;
+        ++i;
+      }
+      self.add(doc);
+    });
+  });
+  this.store = _.mapKeys(items, function (doc) {
     return doc.id;
-  })
+  });
 };
 
 Fulltext.prototype = {
